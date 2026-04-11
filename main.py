@@ -1,7 +1,4 @@
 import threading
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton
-from PySide6.QtCore import Qt, QSize
-from PIL import Image
 import time
 from instagrapi import Client
 import os
