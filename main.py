@@ -7,6 +7,7 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+CREDITS = "Programmed by Anonypos, 2026."
 import threading
 from colorama import Fore, Style, Back
 import time
@@ -15,7 +16,6 @@ from instagrapi.exceptions import *
 import os
 import subprocess
 import pwinput
-import urllib3
 import requests
 import logging
 colors = {
@@ -44,9 +44,9 @@ def login_2_session(user : str, passw: str) -> Client:
             os.mkdir(os.path.join(os.getcwd(),"sessions"))
             os.chdir(os.path.join(os.getcwd(),"sessions"))
             #Dump the session
-            global_cl.dump_settings(os.path.join("data","sessions",f"{str(global_cl.user_id) + "_settings.json"}"))
+            global_cl.dump_settings(os.join("data","sessions",f"{str(global_cl.user_id) + "_settings.json"}"))
       except FileExistsError:
-            global_cl.dump_settings(os.path.join("data","sessions",f"{str(global_cl.user_id) + "_settings.json"}"))
+            global_cl.dump_settings(os.join("data","sessions",f"{str(global_cl.user_id) + "_settings.json"}"))
       return global_cl
 
     except ChallengeRequired:
@@ -55,7 +55,11 @@ def login_2_session(user : str, passw: str) -> Client:
     except BadPassword:
           print(f"{Fore.RED}Please check your password!!{Fore.RESET}")
           return "bad_pass"
-
+    except UnknownError:
+          print(f"{Fore.RED}Please check your informations!!{Fore.RESET}")
+          return "unknownerror"
+    except UserNotFound:
+          print(f"{Fore.RED}Username Not Found!!{Fore.RESET}")
 def load_session(file : str) -> Client:
        global is_Loggedin, global_cl
        global_cl = Client()
@@ -120,10 +124,7 @@ def show_followers(cl : Client, id):
                   "Profile Picture (url)": str(user.profile_pic_url) + "\n"
             }
             for info in infos:
-                  print(f"{colors['gre']}{info}{colors["res"]} : {infos[info]}")
-            
-
-      
+                  print(f"{colors['gre']}{info}{colors["res"]} : {infos[info]}")      
 def self_followers(cl : Client) -> list:
       return list_followers(cl, cl.user_info.id)
 #Get user infos by id
@@ -134,6 +135,49 @@ def get_info(cl: Client, id):
 def get_account_infos(cl: Client):
       return cl.account_info()
 
+def show_account_infos(cl: Client):
+      infos = get_account_infos(cl)
+      infos_dict = {
+            "User id" : infos.pk,
+            "Username" : infos.username,
+            "Full Name": infos.full_name,
+            "Bio" : infos.biography,
+            "Followers Count": cl.user_info(infos.pk).follower_count,
+            "Following Count": cl.user_info(infos.pk).following_count,
+            "Is Private": infos.is_private,
+            "Is Business" : infos.is_business,
+            "Is Verified" : infos.is_verified,
+            "Email" : infos.email,
+            "Phone Number" : infos.phone_number,
+            "User Birthday" : infos.birthday,
+            "Profile Picture (url)" : infos.profile_pic_url
+      }
+            #infos template
+      infos_templ = f"""{CREDITS}
+
+_------------------------------_
+{" "*9}Account Infos
+_------------------------------_
+"""
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")
+      print(f"{" "*9}{colors['yel']}Account Infos{colors['res']}")
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")
+      for info in infos_dict:
+            infos_templ += f"{info} : {infos_dict[info]}\n"
+            print(f"{colors['gre']}{info}{colors["res"]} : {infos_dict[info]}")
+      #Save the output
+      if os.path.exists(os.path.join(os.getcwd(),"data","myaccounts")):
+            if os.path.exists(os.path.join(os.getcwd(),"data","myaccounts",infos.username)):
+                  pass
+            else:
+                  os.makedirs(os.path.join("data","myaccounts",infos.username))
+      else:
+            os.makedirs(os.path.join("data","myaccounts",infos.username))
+            
+      output_path = os.path.join(os.getcwd(),"data","myaccounts",infos.username,"AccountInfos.txt")
+      with open(output_path, "w", encoding="utf-16") as f:
+            f.write(infos_templ)
+      print(f"Account infos saved in {colors['yel']}{output_path}{colors['res']}")
 ####CLI
 #Program Logo
 anonista_logo =rf"""{colors['gre']}    _                      _     _        
@@ -178,17 +222,24 @@ print(f"Type {colors['yel']}'help'{colors["res"]} to show the commands.")
 def login():
       global is_Loggedin
       global global_cl
+      attmps = 0
       while True:
             user = input(f"Username: ")
             passwd = pwinput.pwinput(prompt="Password: ", mask="*")
             global_cl =  login_2_session(user=user, passw=passwd)
+            attmps += 1
+            if attmps == 4:
+                  print(f"{colors['yel']}If you're entering the correct credentials but still can't log in, your account may be temporarily blocked.\nPlease wait a certain amount of time before trying again, or use another account.\n{colors['red']}If you still can't log in, your IP address may have been blocked by Instagram's servers. Please try again using a VPN.{colors['res']}")
             if global_cl == "bad_pass":
                   pass
             elif global_cl == "challenge":
                   pass
+            elif global_cl == "unknownerror":
+                  pass
             else:
                   is_Loggedin = True
                   print(f"{colors['gre']}Logged in to {colors["yel"]}@{user}{colors["res"]}.")
+                  break
 #sessions handling
 def sessions():
       sessions = list_sessions()
@@ -203,6 +254,7 @@ def sessions():
             i = 0
             for session in sessions:
                   print(f"{" "*20}<{i}>|{" "*5}{session}")
+                  i += 1
 #Login to a session using the session's ID
 def load_session_with_id(id : int):
       try:
@@ -228,23 +280,34 @@ while True:
                   login()
             elif cmd.lower() == "sessions":
                   sessions()
-            elif cmd.lower().startswith("load_session "):
-                  try:
-                        id = int(cmd[len("load_session "):])
-                        load_session_with_id(id)
-                  except:
-                        print(f"{colors["red"]}Please enter a valid id.{colors["res"]}")
-            elif cmd.lower().startswith("followers "):
-                  if is_Loggedin:
+            elif cmd.lower().startswith("load_session"):
+                  if len(cmd) >= len("laod_session  "):
                         try:
-                              username = cmd[len("followers "):]
-                              userid = global_cl.user_id_from_username(username=username)
-                              print(f"Getting the user's followers... {colors['yel']}It may take some time!{colors["res"]}")
-                              show_followers(global_cl, userid)
-                        except Exception as e:
-                              print("Error: ", e)
-                        except UserNotFound:
-                              print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
+                              id = int(cmd[len("load_session "):])
+                              load_session_with_id(id)
+                        except:
+                              print(f"{colors["red"]}Please enter a valid id.{colors["res"]}")
+                  else:
+                        print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}load_session {colors["blu"]}<id>{colors['res']}")
+            elif cmd.lower().startswith("followers"):
+                  if len(cmd) >= len("followers  "):
+                        if is_Loggedin:
+                              try:
+                                    username = cmd[len("followers "):]
+                                    userid = global_cl.user_id_from_username(username=username)
+                                    print(f"Getting the user's followers... {colors['yel']}It may take some time!{colors["res"]}")
+                                    show_followers(global_cl, userid)
+                              except Exception as e:
+                                    print("Error: ", e)
+                              except UserNotFound:
+                                    print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
+                        else:
+                              print(login_before_error)
+                  else:
+                        print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}followers {colors["blu"]}<username>{colors['res']}")
+            elif cmd.lower() == "getinfo":
+                  if is_Loggedin:
+                        show_account_infos(global_cl)
                   else:
                         print(login_before_error)
             #Command not found
