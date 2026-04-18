@@ -124,9 +124,42 @@ def show_followers(cl : Client, id):
                   "Profile Picture (url)": str(user.profile_pic_url) + "\n"
             }
             for info in infos:
-                  print(f"{colors['gre']}{info}{colors["res"]} : {infos[info]}")      
+                  print(f"{colors['gre']}{info}{colors["res"]} : {infos[info]}")
+
+def show_followings(cl, id):
+      followings = list_following(cl, id)
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")
+      print(f"{" "*9}{colors['yel']}User Followings{colors['res']}")
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")
+      for following in followings:
+            user = followings[following]
+            infos = {
+                  "Username" : user.username,
+                  "Fullname" : user.full_name,
+                  "UserId" : user.pk,
+                  "Is Private": user.is_private,
+                  "Profile Picture (url)": str(user.profile_pic_url) + "\n"
+            }
+            for info in infos:
+                  print(f"{colors['gre']}{info}{colors['res']} : {infos[info]}")
+      
+
 def self_followers(cl : Client) -> list:
-      return list_followers(cl, cl.user_info.id)
+      followers =  list_followers(cl, cl.user_id)
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")
+      print(f"{" "*9}{colors['yel']}Account Followers{colors['res']}")
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")     
+      for follower in followers:
+            user = followers[follower]
+            infos = {
+                  "Username" : user.username,
+                  "Fullname" : user.full_name,
+                  "UserId" : user.pk,
+                  "Is Private": user.is_private,
+                  "Profile Picture (url)": str(user.profile_pic_url) + "\n"
+            }
+            for info in infos:
+                  print(f"{colors['gre']}{info}{colors['res']} : {infos[info]}")
 #Get user infos by id
 def get_info(cl: Client, id):
       return cl.user_info(user_id=id)
@@ -196,7 +229,9 @@ help_dic = {"Login Managment":
                    "getinfo": "Show your profile infos.",
                    "self_followers" : "List your followers.",
                    "self_following" : "List your followings",
-                   "self_bitches" : "List the users that don't follow you back."
+                   "self_bitches" : "List the users that don't follow you back.",
+                   "unfollow <username>" : "Unfollow a user.",
+                   "remove_bitches" : "Unfollow all the accounts that don't follow you back."
              },
              "User Enumeration":
              {
@@ -310,6 +345,26 @@ while True:
                         show_account_infos(global_cl)
                   else:
                         print(login_before_error)
+            elif cmd.lower().startswith("following"):
+                  if is_Loggedin:
+                        if len(cmd) >= len("following  "):
+                              try:
+                                    userid = global_cl.user_id_from_username(cmd[len("following "):])
+                                    print(f"Getting the user's followings... {colors["yel"]}It may take some time!{colors['res']}")
+                                    show_followings(global_cl, userid)
+                              except UserNotFound:
+                                    print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
+                        else:
+                              print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}following {colors["blu"]}<username>{colors['res']}")
+                  else:
+                        print(login_before_error)
+            elif cmd.lower() == "self_followers":
+                  if is_Loggedin:
+                        self_followers(global_cl)
+                  else:
+                        print(login_before_error)
+            
+                                    
             #Command not found
             else:
                   print(f"{colors["red"]}Command not found!{colors['res']} Type {colors["yel"]}'help'{colors["red"]} -_-{colors['res']}")
