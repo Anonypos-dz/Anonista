@@ -31,22 +31,21 @@ global_cl : Client = None
 
 #Hide urllib3 warns
 logging.disable(logging.CRITICAL)
+#login and the save the session in os.path.join("data","sessions")
 def login_2_session(user : str, passw: str) -> Client:
     global is_Loggedin, global_cl
     global_cl = Client()
     is_Loggedin = True
     try:
       global_cl.login(username=user, password=passw)
-      try:
-            #Setting-up sessions data
-            os.mkdir(os.path.join(os.getcwd(),"data"))
-            os.chdir(os.path.join(os.getcwd(),"data"))
-            os.mkdir(os.path.join(os.getcwd(),"sessions"))
-            os.chdir(os.path.join(os.getcwd(),"sessions"))
-            #Dump the session
-            global_cl.dump_settings(os.join("data","sessions",f"{str(global_cl.user_id) + "_settings.json"}"))
-      except FileExistsError:
-            global_cl.dump_settings(os.join("data","sessions",f"{str(global_cl.user_id) + "_settings.json"}"))
+      if os.path.exists(os.path.join(os.getcwd(), "data")):
+            if os.path.exists(os.path.join(os.getcwd(), "data", "sessions")):
+                  pass
+            else:
+                  os.mkdir(os.path.join(os.getcwd(), "data", "sessions"))
+      else:
+            os.mkdir(os.path.join(os.getcwd()))
+      global_cl.dump_settings(os.path.join(os.getcwd(),"data","sessions",f"{str(global_cl.user_id) + "_settings.json"}"))
       return global_cl
 
     except ChallengeRequired:
@@ -63,9 +62,13 @@ def login_2_session(user : str, passw: str) -> Client:
 def load_session(file : str) -> Client:
        global is_Loggedin, global_cl
        global_cl = Client()
-       global_cl.load_settings(file)
-       is_Loggedin = True
-       return global_cl
+       try:
+             
+            global_cl.load_settings(file)
+            is_Loggedin = True
+            return global_cl
+       except Exception as e:
+             print(e)
 
 def list_sessions():
     try:
@@ -93,6 +96,9 @@ def list_following(cl, id) -> dict:
 def list_bitches(cl, id) -> list:
       """Return the users that don't follow back."""
       followers_obg = list_followers(cl, id)
+      #1 second delay
+      print(f"{colors['blu']}1s COOLDOWN (IT'S IMPORTANT)....{colors['res']}")
+      time.sleep(1)
       following_obg = list_following(cl, id)
       followers_ids = []
       following_ids = []
@@ -125,6 +131,8 @@ def show_followers(cl : Client, id):
             }
             for info in infos:
                   print(f"{colors['gre']}{info}{colors["res"]} : {infos[info]}")
+      print(f"{colors['blu']}1s COOLDOWN (IT'S IMPORTANT)....{colors['res']}")
+      time.sleep(1)
 
 def show_followings(cl, id):
       followings = list_following(cl, id)
@@ -142,9 +150,31 @@ def show_followings(cl, id):
             }
             for info in infos:
                   print(f"{colors['gre']}{info}{colors['res']} : {infos[info]}")
-      
+            print(f"{colors['blu']}1s COOLDOWN (IT'S IMPORTANT)....{colors['res']}")
+            time.sleep(1)
 
-def self_followers(cl : Client) -> list:
+def show_bitches(cl: Client, id):
+      bitches = list_bitches(cl, id)
+      if bitches:
+            print(f"{colors['red']}_------------------------------_{colors["res"]}")
+            print(f"{" "*9}{colors['yel']}Bitches List{colors['res']}")
+            print(f"{colors['red']}_------------------------------_{colors["res"]}")
+            for bitch in bitches:
+                  user = cl.user_info(bitch) 
+                  infos = {
+                  "Username" : user.username,
+                  "Fullname" : user.full_name,
+                  "UserId" : user.pk,
+                  "Is Private": user.is_private,
+                  "Profile Picture (url)": str(user.profile_pic_url) + "\n"
+                  }
+                  for info in infos:
+                        print(f"{colors["red"]}{info}{colors["res"]} : {infos[info]}")
+      else:
+            print(f"{colors['gre']}No users found! the EGO is safe.{colors["res"]}")
+            return "no_bitches"
+
+def self_followers(cl : Client):
       followers =  list_followers(cl, cl.user_id)
       print(f"{colors['red']}_------------------------------_{colors["res"]}")
       print(f"{" "*9}{colors['yel']}Account Followers{colors['res']}")
@@ -160,6 +190,26 @@ def self_followers(cl : Client) -> list:
             }
             for info in infos:
                   print(f"{colors['gre']}{info}{colors['res']} : {infos[info]}")
+
+def self_following(cl : Client):
+      show_followings(cl, cl.user_id)
+
+def self_bitches(cl : Client):
+      Rvalue = show_bitches(cl, cl.user_id)
+      if Rvalue != "no_bitches":
+            print(f"{colors['red']}YOU CAN STRIKE BACK! USE 'remove_bitches' COMMAND TO PROTECT YOUR EGO.{colors['res']}")
+
+def remove_bitches(cl : Client):
+      print(f"{colors['yel']}Getting the users that don't follow you back...{colors['res']}")
+      bitches = list_bitches(cl, cl.user_id)
+      if bitches:
+            print(f"{colors['blu']}Protecting the EGO...")
+            print(f"{colors['red']}BITCHES COUNT:{colors['res']}{len(bitches)}")
+            for bitch in bitches:
+                  cl.user_unfollow(bitch)
+                  print(f"{colors['gre']}{cl.username_from_user_id(bitch)}Was unfollowed successfully!!")
+      else:
+            print(f"{colors['gre']}Your EGO is safe!! Keep protecting it.{colors['res']}")
 #Get user infos by id
 def get_info(cl: Client, id):
       return cl.user_info(user_id=id)
@@ -221,8 +271,9 @@ anonista_logo =rf"""{colors['gre']}    _                      _     _
             {Style.DIM}V1.0 {Style.RESET_ALL}{Style.BRIGHT}BETA {Style.DIM}(CLI){Style.RESET_ALL}"""
 help_dic = {"Login Managment":
             {"login": "Login to your Instagram account using username and password.",
+             f"sessionid_login {colors['res']}<sessionid value>": "Login with sessionid cookie",
              "sessions": "List all logged sessions.",
-             "load_session <id>": "Login by loading a saved session.",
+             f"load_session {colors['res']}<id>": "Login by loading a saved session.",
              },
              "Account Managment":
              {
@@ -230,16 +281,16 @@ help_dic = {"Login Managment":
                    "self_followers" : "List your followers.",
                    "self_following" : "List your followings",
                    "self_bitches" : "List the users that don't follow you back.",
-                   "unfollow <username>" : "Unfollow a user.",
+                   f"unfollow {colors['res']}<username{colors['yel']}|{colors["res"]}userid{colors['yel']}|{colors["res"]}list_file>" : "Unfollow a user.",
                    "remove_bitches" : "Unfollow all the accounts that don't follow you back."
              },
              "User Enumeration":
              {
-                   "userinfo <username>" : "Show all the user's infos.",
-                   "dump_posts <username>" : "Download all the user's postes",
-                   "followers <username>" : "List the user's followers",
-                   "following <username>" : "List the user's followings",
-                   "bitches <username>" : "List the users that don't follow back the user."
+                   f"userinfo {colors['res']}<username{colors['yel']}|{colors["res"]}userid{colors['yel']}|{colors["res"]}list_file>" : "Show all the user's infos.",
+                   f"dump_posts {colors['res']}<username{colors['yel']}|{colors["res"]}userid{colors['yel']}|{colors["res"]}list_file>" : "Download all the user's postes",
+                   f"followers {colors['res']}<username{colors['yel']}|{colors["res"]}userid{colors['yel']}|{colors["res"]}list_file>" : "List the user's followers",
+                   f"following {colors['res']}<username{colors['yel']}|{colors["res"]}userid{colors['yel']}|{colors["res"]}list>" : "List the user's followings",
+                   f"bitches {colors['res']}<username{colors['yel']}|{colors["res"]}userid>" : "List the users that don't follow back the user."
              }
             }
 def print_help():
@@ -275,6 +326,26 @@ def login():
                   is_Loggedin = True
                   print(f"{colors['gre']}Logged in to {colors["yel"]}@{user}{colors["res"]}.")
                   break
+#Login with sessionid cookie
+def sessionid_login(sessionid):
+      global global_cl, is_Loggedin
+      try:
+            cl = Client()
+            cl.login_by_sessionid(sessionid)
+            global_cl = cl
+            is_Loggedin = True
+            print(f"{colors['gre']}Logged in to {colors["yel"]}@{global_cl.username_from_user_id(global_cl.user_id)}{colors["res"]}.")
+            if os.path.exists(os.path.join(os.getcwd(), "data")):
+                  if os.path.exists(os.path.join(os.getcwd(), "data", "sessions")):
+                        pass
+                  else:
+                        os.mkdir(os.path.join(os.getcwd(), "data", "sessions"))
+            else:
+                  os.mkdir(os.path.join(os.getcwd()))
+            global_cl.dump_settings(os.path.join("data","sessions",f"{str(global_cl.user_id) + "_settings.json"}"))
+      except Exception as e:
+            print(e)
+
 #sessions handling
 def sessions():
       sessions = list_sessions()
@@ -303,7 +374,9 @@ def load_session_with_id(id : int):
 while True:
       try:
             cmd = input(f"{colors['gre']}Ano{colors['red']}nis{colors["res"]}ta{colors['blu']}>>{colors['res']} ")
-            if cmd.lower() == "exit":
+            if cmd == "":
+                  pass
+            elif cmd.lower() == "exit":
                   print(f"\nGood byeeee! {colors['red']}See u soon +-+{colors["res"]}")
                   exit(0)
             elif cmd.lower() == "help":
@@ -320,26 +393,33 @@ while True:
                         try:
                               id = int(cmd[len("load_session "):])
                               load_session_with_id(id)
-                        except:
-                              print(f"{colors["red"]}Please enter a valid id.{colors["res"]}")
+                        except KeyError as e:
+                                    if str(e) == "'pinned_channels_info'":
+                                          print(f"{colors['red']}Session expired! Please login.{colors['res']}")
+                        except ValueError:
+                                    print(f"{colors["red"]}Please enter a valid id.{colors["res"]}")
                   else:
                         print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}load_session {colors["blu"]}<id>{colors['res']}")
             elif cmd.lower().startswith("followers"):
                   if len(cmd) >= len("followers  "):
                         if is_Loggedin:
                               try:
-                                    username = cmd[len("followers "):]
-                                    userid = global_cl.user_id_from_username(username=username)
+                                    userid = int(cmd[len("followers "):])
                                     print(f"Getting the user's followers... {colors['yel']}It may take some time!{colors["res"]}")
                                     show_followers(global_cl, userid)
-                              except Exception as e:
-                                    print("Error: ", e)
-                              except UserNotFound:
-                                    print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
+                              except ValueError:
+                                    try:
+                                          username = cmd[len("followers "):]
+                                          userid = global_cl.user_id_from_username(username=username)
+                                          print(f"Getting the user's followers... {colors['yel']}It may take some time!{colors["res"]}")
+                                          show_followers(global_cl, userid)
+                                    except UserNotFound:
+                                          print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
+                                    
                         else:
                               print(login_before_error)
                   else:
-                        print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}followers {colors["blu"]}<username>{colors['res']}")
+                        print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}followers {colors["blu"]}<username/userid>{colors['res']}")
             elif cmd.lower() == "getinfo":
                   if is_Loggedin:
                         show_account_infos(global_cl)
@@ -349,13 +429,18 @@ while True:
                   if is_Loggedin:
                         if len(cmd) >= len("following  "):
                               try:
-                                    userid = global_cl.user_id_from_username(cmd[len("following "):])
+                                    userid = int(cmd[len("following "):])
                                     print(f"Getting the user's followings... {colors["yel"]}It may take some time!{colors['res']}")
                                     show_followings(global_cl, userid)
-                              except UserNotFound:
-                                    print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
+                              except ValueError:
+                                    try:
+                                          userid = global_cl.user_id_from_username(cmd[len("following "):])
+                                          print(f"Getting the user's followings... {colors["yel"]}It may take some time!{colors['res']}")
+                                          show_followings(global_cl, userid)
+                                    except UserNotFound:
+                                          print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
                         else:
-                              print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}following {colors["blu"]}<username>{colors['res']}")
+                              print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}following {colors["blu"]}<username/userid>{colors['res']}")
                   else:
                         print(login_before_error)
             elif cmd.lower() == "self_followers":
@@ -363,8 +448,48 @@ while True:
                         self_followers(global_cl)
                   else:
                         print(login_before_error)
-            
-                                    
+            elif cmd.lower().startswith("sessionid_login"):
+                  if len(cmd) >= len("sessionid_login  "):
+                        sessionid = cmd[len("sessionid_login "):]
+                        sessionid_login(sessionid)
+                  else:
+                        print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}sessionid_login {colors["blu"]}<sessionid value>{colors['res']}")
+            elif cmd.lower().startswith("bitches"):
+                  if is_Loggedin:
+                        if len(cmd) >= len("bitches  "):
+                              try:
+                                    userid = int(cmd[len("bitches "):])
+                                    print(f"Getting the user that don't follow back... {colors["yel"]}It may take some time!{colors['res']}")
+                                    list_bitches(global_cl, userid)
+                              except ValueError:
+                                    try:
+                                          userid = global_cl.user_id_from_username(cmd[len("bitches "):])
+                                          print(f"Getting the users that don't follow back... {colors["yel"]}It may take some time!{colors['res']}")
+                                          list_bitches(global_cl, userid)
+                                    except UserNotFound:
+                                          print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
+                        else:
+                              print(f"{colors['red']}Syntax error!\n{colors['yel']}Usage: {colors['res']}bitches {colors["blu"]}<username/userid>{colors['res']}")
+                  else:
+                        print(login_before_error)
+
+            elif cmd.lower() == "self_bitches":
+                  if is_Loggedin:
+                        print(f"Getting the users that don't follow you back... {colors["yel"]}It may take some time!{colors['res']}")
+                        self_bitches(global_cl)
+                  else:
+                        print(login_before_error)
+            elif cmd.lower() == "self_following":
+                  if is_Loggedin:
+                        print(f"Getting the users that you follow... {colors["yel"]}It may take some time!{colors['res']}")
+                        self_following(global_cl)
+                  else:
+                        print(login_before_error)
+            elif cmd.lower() == "remove_bitches":
+                  if is_Loggedin:
+                        remove_bitches(global_cl)
+                  else:
+                        print(login_before_error)
             #Command not found
             else:
                   print(f"{colors["red"]}Command not found!{colors['res']} Type {colors["yel"]}'help'{colors["red"]} -_-{colors['res']}")
