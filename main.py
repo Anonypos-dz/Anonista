@@ -261,6 +261,14 @@ _------------------------------_
       with open(output_path, "w", encoding="utf-16") as f:
             f.write(infos_templ)
       print(f"Account infos saved in {colors['yel']}{output_path}{colors['res']}")
+
+def userinfo(cl : Client, id) -> dict:
+      infos = cl.user_info_gql(id)
+      return infos
+def show_userinfo(cl : Client, id):
+      print(userinfo(cl, id))
+
+
 ####CLI
 #Program Logo
 anonista_logo =rf"""{colors['gre']}    _                      _     _        
@@ -488,6 +496,22 @@ while True:
             elif cmd.lower() == "remove_bitches":
                   if is_Loggedin:
                         remove_bitches(global_cl)
+                  else:
+                        print(login_before_error)
+            
+            elif cmd.lower().startswith("userinfo"):
+                  if is_Loggedin:
+                        if len(cmd) >= len("userinfo  "):
+                              inputed = cmd[len("userinfo "):]
+                              try:
+                                    userid = int(inputed)
+                                    show_userinfo(global_cl, userid)
+                              except ValueError:
+                                    try:
+                                          userid = global_cl.user_id_from_username(inputed)
+                                          show_userinfo(global_cl, userid)
+                                    except UserNotFound:
+                                          print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
                   else:
                         print(login_before_error)
             #Command not found
