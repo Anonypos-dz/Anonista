@@ -18,6 +18,7 @@ import subprocess
 import pwinput
 import requests
 import logging
+import random
 colors = {
       "yel" : Fore.YELLOW,
       "red" : Fore.RED,
@@ -208,6 +209,7 @@ def remove_bitches(cl : Client):
             for bitch in bitches:
                   cl.user_unfollow(bitch)
                   print(f"{colors['gre']}{cl.username_from_user_id(bitch)}Was unfollowed successfully!!")
+                  time.sleep(1 + 1 / random.randint(1,6))
       else:
             print(f"{colors['gre']}Your EGO is safe!! Keep protecting it.{colors['res']}")
 #Get user infos by id
@@ -263,11 +265,52 @@ _------------------------------_
       print(f"Account infos saved in {colors['yel']}{output_path}{colors['res']}")
 
 def userinfo(cl : Client, id) -> dict:
-      infos = cl.user_info_gql(id)
-      return infos
-def show_userinfo(cl : Client, id):
-      print(userinfo(cl, id))
+      return cl.user_info(id)
 
+def show_userinfo(cl : Client, id):
+      infos = userinfo(cl, id)
+      infos_dict = {
+            "UserID" : infos.pk,
+            "UserName" : infos.username,
+            "FullName" : infos.full_name,
+            "Is Private" : infos.is_private,
+            "Is Verified": infos.is_verified,
+            "Is Business": infos.is_business,
+            "Followers Count" : infos.follower_count,
+            "Following Count" : infos.following_count,
+            "Posts Count" : infos.media_count,
+            "Bio" : infos.biography
+      }
+      infos_templ = f"""{CREDITS}
+
+_------------------------------_
+{" "*9}Account Infos
+_------------------------------_
+"""      
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")
+      print(f"{" "*9}{colors['yel']}User Infos{colors['res']}")
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")      
+      for info in infos_dict:
+            print(f"{colors['gre']}{info}{colors['res']} : {infos_dict[info]}")
+            infos_templ += f"{info} : {infos_dict[info]}\n"
+      if os.path.exists(os.path.join(os.getcwd(), "data")):
+            pass
+      else:
+            os.mkdir(os.path.join(os.getcwd(), "data"))
+
+      if os.path.exists(os.path.join(os.getcwd(), "data", "users")):
+            if os.path.exists(os.path.join(os.getcwd(), "data", "users", infos.username)):
+                  pass
+            else:
+                  os.mkdir(os.path.join(os.getcwd(), "data", "users", infos.username))
+      else:
+            os.mkdir(os.path.join(os.getcwd(), "data", "users"))
+      out_path = os.path.join(os.getcwd(), "data", "users", infos.username, "userinfos.txt")
+      with open(out_path, "w", encoding="utf-16") as f:
+            f.write(infos_templ)
+      print(f"Output saved in {colors['yel']}{out_path}{colors['res']}")
+      print(f"{colors['blu']}3s COOLDOWN (IT'S IMPORTANT)....{colors['res']}")
+      time.sleep(3)
 
 ####CLI
 #Program Logo
