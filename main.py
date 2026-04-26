@@ -384,9 +384,30 @@ def get_userposts(cl : Client, id):
 
 def show_userposts(cl, id):
       posts = get_userposts(cl, id)
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")
+      print(f"{" "*9}{colors['yel']}User Posts{colors['res']}")
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")  
       for post in posts:
-            print(post)
-            print("\n======================================================\n")
+            media_type = None
+            if post.media_type == 1:
+                  media_type = "Photo"
+            elif post.media_type == 2:
+                  media_type = "Video"
+            infos = {
+                  "\nType" : media_type,
+                  "Caption" : post.caption_text,
+                  "Likes count" : post.like_count,
+                  "Has Liked" : post.has_liked,
+                  "Comments Disabled" : post.comments_disabled,
+                  "Comments count" : post.comment_count,
+                  "Cover url" : post.thumbnail_url,
+            }
+            if post.media_type == 2:
+                  infos.update({"Video url" : post.video_url})
+            for info in infos:
+                  print(f"{colors['gre']}{info}{colors['res']} : {infos[info]}")
+
+            print("\n")
 ####CLI
 #Program Logo
 anonista_logo =rf"""{colors['gre']}    _                      _     _        
@@ -657,6 +678,10 @@ while True:
             #Command not found
             else:
                   print(f"{colors["red"]}Command not found!{colors['res']} Type {colors["yel"]}'help'{colors["red"]} -_-{colors['res']}")
+      except ClientError:
+            print(f"{colors['red']}Wooah Bro chill!! Too many requists. Sleeping for 1min....{colors['res']}")
+            time.sleep(60)
+
       except KeyboardInterrupt:
             print(f"\nGood byeeee! {colors['red']}See u soon +-+{colors["res"]}")
             break
