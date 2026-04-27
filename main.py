@@ -8,7 +8,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 CREDITS = "Programmed by Anonypos, 2026."
-import threading
+import sys
 from colorama import Fore, Style, Back
 import time
 from instagrapi import Client
@@ -74,25 +74,44 @@ def load_session(file : str) -> Client:
              print(e)
 
 def list_sessions():
-    try:
-      entrys = os.scandir(os.path.join("data", "sessions"))
       sessions = []
-      for entry in entrys:
-           if entry.is_file():
-                 sessions.append(entry.name.split("_")[0])
+      if os.path.exists(os.path.join(os.getcwd(), "data")):
+            if os.path.exists(os.path.join(os.getcwd(), "data", "sessions")):
+                  files = os.scandir(os.path.join(os.getcwd(), "data", "sessions"))
+                  for file in files:
+                        if file:
+                              if file.is_file():
+                                    sessions.append(file.name.split("_")[0])
+            else:
+                  os.mkdir(os.path.join(os.getcwd(), "data", "sessions"))
+      else:
+            os.makedirs(os.path.join(os.getcwd(), "data", "sessions"))
       return sessions
-    except FileNotFoundError:
-            os.mkdir(os.path.join(os.getcwd(),"data"))
-            os.chdir(os.path.join(os.getcwd(),"data"))
-            os.mkdir(os.path.join(os.getcwd(),"sessions"))
-            os.chdir(os.path.join(os.getcwd(),"sessions"))
-            return []
+def progress_bar(pregress, total):
+    percent = pregress * 100 / total
+    bar = f"{colors["red"]}#{colors["res"]}" * int(percent) + f"{colors['gre']}-{colors['res']}" * (100 - int(percent))
+    sys.stdout.write(f"\r{colors['yel']}|{bar}{colors["yel"]}|{colors['res']} {percent :.2f}%\r")
+    sys.stdout.flush()
+
+def download_media(url, file):
+    length = int(requests.head(url, allow_redirects=True).headers.get("Content-Length"))
+    file_type = requests.head(url, allow_redirects=True).headers.get("Content-Type").split("/")[1]
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        status = 0
+        with open(file+f".{file_type}", "wb") as f:
+            for chunck in r.iter_content(chunk_size=1024):
+                if chunck:
+                    f.write(chunck)
+                    status += len(chunck)
+                    progress_bar(status, length)
+
 login_before_error = f"{Fore.RED}Please login to your account before using this command!{colors["res"]}"
-def list_followers(cl, id) -> dict:
+def list_followers(cl, id):
       return cl.user_followers(id)
       
 
-def list_following(cl, id) -> dict:
+def list_following(cl, id):
       return cl.user_following(id)
 
 
@@ -382,11 +401,55 @@ _------------------------------_
 def get_userposts(cl : Client, id):
       return cl.user_medias(id)
 
-def show_userposts(cl, id):
+def dump_userposts(cl : Client, id):
+      posts = get_userposts(cl, id)
+      username = cl.username_from_user_id(id)
+      if os.path.exists(os.path.join(os.getcwd(), "data")):
+            pass
+      else:
+            os.mkdir(os.path.join(os.getcwd(), "data"))
+
+      if os.path.exists(os.path.join(os.getcwd(), "data", "users")):
+            if os.path.exists(os.path.join(os.getcwd(), "data", "users", username)):
+                  if os.path.exists(os.path.join(os.getcwd(), "data", "users", username, "posts")):
+                        if os.path.exists(os.path.join(os.getcwd(), "data", "users", username, "reels")):
+                              pass
+                        else:
+                              os.mkdir(os.path.join(os.getcwd(), "data", "users", username, "reels"))
+                  else:
+                        os.mkdir(os.path.join(os.getcwd(), "data", "users", username, "posts"))
+            else:
+                  os.makedirs(os.path.join(os.getcwd(), "data", "users", username, "posts"))
+                  os.makedirs(os.path.join(os.getcwd(), "data", "users", username, "reels"))
+      else:
+            os.makedirs(os.path.join(os.getcwd(), "data", "users", username, "posts"))
+            os.makedirs(os.path.join(os.getcwd(), "data", "users", username, "reels"))
+      
+      for post in posts:    
+            if post.media_type == 1:
+                  print(f"\nDownloading {post.id}.....\n")
+                  download_media(str(post.thumbnail_url),os.path.join(os.getcwd(), "data", "users", username, "posts", str(post.id)))
+            elif post.media_type == 2:
+                  print(f"\nDownloading {post.id}.....\n")
+                  download_media(str(post.video_url),os.path.join(os.getcwd(), "data", "users", username, "reels", str(post.id)))
+                  download_media(str(post.thumbnail_url),os.path.join(os.getcwd(), "data", "users", username, "reels", str(post.id) + "_cover"))
+      print("\n")
+      print(f"{colors['blu']}5s COOLDOWN (IT'S IMPORTANT)...{colors['res']}")
+      time.sleep(5)
+
+
+
+def show_userposts(cl : Client, id):
       posts = get_userposts(cl, id)
       print(f"{colors['red']}_------------------------------_{colors["res"]}")
       print(f"{" "*9}{colors['yel']}User Posts{colors['res']}")
-      print(f"{colors['red']}_------------------------------_{colors["res"]}")  
+      print(f"{colors['red']}_------------------------------_{colors["res"]}")
+      infos_templ = f"""{CREDITS}
+
+_------------------------------_
+{" "*9}User posts
+_------------------------------_
+"""  
       for post in posts:
             media_type = None
             if post.media_type == 1:
@@ -406,8 +469,27 @@ def show_userposts(cl, id):
                   infos.update({"Video url" : post.video_url})
             for info in infos:
                   print(f"{colors['gre']}{info}{colors['res']} : {infos[info]}")
-
+                  infos_templ += f"{info} : {infos[info]}\n"
             print("\n")
+            username = cl.username_from_user_id(id)
+            if os.path.exists(os.path.join(os.getcwd(), "data")):
+                  pass
+            else:
+                  os.mkdir(os.path.join(os.getcwd(), "data"))
+
+            if os.path.exists(os.path.join(os.getcwd(), "data", "users")):
+                  if os.path.exists(os.path.join(os.getcwd(), "data", "users", username)):
+                        pass
+                  else:
+                        os.mkdir(os.path.join(os.getcwd(), "data", "users", username))
+            else:
+                  os.mkdir(os.path.join(os.getcwd(), "data", "users"))
+      out_path = os.path.join(os.getcwd(), "data", "users", username, "media.txt")
+      with open(out_path, "w", encoding="utf-16") as f:
+            f.write(infos_templ)
+      print(f"{colors['gre']}Output saved in {out_path}{colors['res']}")
+      print(f"{colors['blu']}3s COOLDOWN (IT'S IMPORTANT)....{colors['res']}")
+      time.sleep(3)
 ####CLI
 #Program Logo
 anonista_logo =rf"""{colors['gre']}    _                      _     _        
@@ -496,8 +578,8 @@ def sessionid_login(sessionid):
 
 #sessions handling
 def sessions():
-      sessions = list_sessions()
-      if sessions == []:
+      sessions_list = list_sessions()
+      if sessions_list == []:
             print(f"{colors["yel"]}No sessions found!{colors['res']} Please use {colors['blu']}'login'{colors["res"]} command to save a new session.")
       else:
             print(f"""
@@ -506,7 +588,7 @@ def sessions():
                   _------------------------------_""")
             print(f"{" "*20}ID |{" "*5}USER ID")
             i = 0
-            for session in sessions:
+            for session in sessions_list:
                   print(f"{" "*20}<{i}>|{" "*5}{session}")
                   i += 1
 #Login to a session using the session's ID
@@ -675,13 +757,33 @@ while True:
                               print(f"{colors['yel']}Usage: {colors['res']}userposts {colors["blu"]}<username/userid>{colors['res']}")
                   else:
                         print(login_before_error)
+            elif cmd.lower().startswith("dump_posts"):
+                  if is_Loggedin:
+                        if len(cmd) >= len("dump_posts  "):
+                              inputed = cmd[len("dump_posts "):]
+                              try:
+                                    userid = int(inputed)
+                                    dump_userposts(global_cl, userid)
+                              except ValueError:
+                                    try:
+                                          userid = global_cl.user_id_from_username(inputed)
+                                          dump_userposts(global_cl, userid)
+                                    except UserNotFound:
+                                          print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
+                        else:
+                              print(f"{colors['yel']}Usage: {colors['res']}dump_posts {colors["blu"]}<username/userid>{colors['res']}")
+                  else:
+                        print(login_before_error)
             #Command not found
             else:
                   print(f"{colors["red"]}Command not found!{colors['res']} Type {colors["yel"]}'help'{colors["red"]} -_-{colors['res']}")
       except ClientError:
-            print(f"{colors['red']}Wooah Bro chill!! Too many requists. Sleeping for 1min....{colors['res']}")
-            time.sleep(60)
-
+            try:
+                  print(f"{colors['red']}Wooah Bro chill!! Too many requists. Sleeping for 5min....{colors['res']}\nIf you see this message again please USE A VPN!")
+                  time.sleep(60 * 5)
+            except:
+                  print(f"\nGood byeeee! {colors['red']}See u soon +-+{colors["res"]}")
+                  break
       except KeyboardInterrupt:
             print(f"\nGood byeeee! {colors['red']}See u soon +-+{colors["res"]}")
             break
