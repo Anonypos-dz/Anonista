@@ -450,6 +450,7 @@ _------------------------------_
 {" "*9}User posts
 _------------------------------_
 """  
+      username = cl.username_from_user_id(id)
       for post in posts:
             media_type = None
             if post.media_type == 1:
@@ -471,7 +472,6 @@ _------------------------------_
                   print(f"{colors['gre']}{info}{colors['res']} : {infos[info]}")
                   infos_templ += f"{info} : {infos[info]}\n"
             print("\n")
-            username = cl.username_from_user_id(id)
             if os.path.exists(os.path.join(os.getcwd(), "data")):
                   pass
             else:
@@ -502,7 +502,7 @@ help_dic = {"Login Managment":
             {"login": "Login to your Instagram account using username and password.",
              f"sessionid_login {colors['res']}<sessionid value>": "Login with sessionid cookie",
              "sessions": "List all logged sessions.",
-             f"load_session {colors['res']}<id>": "Login by loading a saved session.",
+             f"load {colors['res']}<id>": "Login by loading a saved session.",
              },
              "Account Managment":
              {
@@ -614,22 +614,24 @@ while True:
             elif cmd.lower() == "clear":
                   if os.name == "nt":
                         subprocess.run("cls", shell=True)
+                  else:
+                        subprocess.run("clear", shell=True)
             elif cmd.lower() == "login":
                   login()
             elif cmd.lower() == "sessions":
                   sessions()
-            elif cmd.lower().startswith("load_session"):
-                  if len(cmd) >= len("laod_session  "):
+            elif cmd.lower().startswith("load"):
+                  if len(cmd) >= len("laod  "):
                         try:
-                              id = int(cmd[len("load_session "):])
+                              id = int(cmd[len("load "):])
                               load_session_with_id(id)
                         except KeyError as e:
                                     if str(e) == "'pinned_channels_info'":
-                                          print(f"{colors['red']}Session expired! Please login.{colors['res']}")
+                                          print(f"{colors['red']} pired! Please login.{colors['res']}")
                         except ValueError:
                                     print(f"{colors["red"]}Please enter a valid id.{colors["res"]}")
                   else:
-                        print(f"{colors['yel']}Usage: {colors['res']}load_session {colors["blu"]}<id>{colors['res']}")
+                        print(f"{colors['yel']}Usage: {colors['res']}load {colors["blu"]}<id>{colors['res']}")
             elif cmd.lower().startswith("followers"):
                   if len(cmd) >= len("followers  "):
                         if is_Loggedin:
@@ -774,6 +776,29 @@ while True:
                               print(f"{colors['yel']}Usage: {colors['res']}dump_posts {colors["blu"]}<username/userid>{colors['res']}")
                   else:
                         print(login_before_error)
+            elif cmd.lower().startswith("unfollow"):
+                  if len(cmd) >= len("unfollow   "):
+                        if is_Loggedin:
+                              inputed = cmd[len("unfollow "):]
+                              try:
+                                    userid = int(inputed)
+                                    global_cl.user_unfollow(userid)
+                                    time.sleep(3)
+                                    print(f"{colors['gre']}User unfollowed!")
+                              except ValueError:
+                                    try:
+                                          userid = global_cl.user_id_from_username(inputed)
+                                          time.sleep(random.uniform(1,3))
+                                          global_cl.user_unfollow(userid)
+                                          time.sleep(3)
+                                          print(f"{colors['gre']}User unfollowed!")
+                                    except UserNotFound:
+                                          print(f"{colors['red']}User not found! Please check the username.{colors["res"]}")
+                        else:
+                              print(login_before_error)
+                  else:
+                        print(f"{colors['yel']}Usage: {colors['res']}unfollow {colors['blu']}<username/userid>{colors["res"]}")
+
             #Command not found
             else:
                   print(f"{colors["red"]}Command not found!{colors['res']} Type {colors["yel"]}'help'{colors["red"]} -_-{colors['res']}")
