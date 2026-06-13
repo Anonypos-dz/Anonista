@@ -8,17 +8,21 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 CREDITS = "Programmed by Anonypos, 2026."
-import sys
-from colorama import Fore, Style, Back
-import time
-from instagrapi import Client
-from instagrapi.exceptions import *
-import os
-import subprocess
-import pwinput
-import requests
-import logging
-import random
+try:
+      import sys
+      from colorama import Fore, Style, Back
+      import time
+      from instagrapi import Client
+      from instagrapi.exceptions import *
+      import os
+      import subprocess
+      import pwinput
+      import requests
+      import logging
+      import random
+except ImportError as e:
+      print("Error: Modules not found!\nPlease run 'pip3 install -r requiments.txt'")
+      sys.exit(-1)
 colors = {
       "yel" : Fore.YELLOW,
       "red" : Fore.RED,
